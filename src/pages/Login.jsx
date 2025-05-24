@@ -377,7 +377,7 @@ export default function Login() {
 
         {/* Footer text */}
         <div className="mt-6 text-center text-gray-400 text-xs">
-          <p>Secured by quantum encryption • Neural-powered authentication</p>
+          <p>Automate • Evaluate • Hire Smart • Powered by HiroBot</p>
         </div>
       </div>
     </div>
