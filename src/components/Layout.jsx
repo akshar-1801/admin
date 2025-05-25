@@ -1,12 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Briefcase, Users, Calendar, BarChart3, Menu, X, Bell, Search, User } from "lucide-react"
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Calendar,
+  BarChart3,
+  Menu,
+  X,
+  Bell,
+  Search,
+  User,
+} from "lucide-react";
 
 const Layout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
   const navigation = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -14,13 +25,20 @@ const Layout = ({ children }) => {
     { name: "Candidates", href: "/admin/candidates", icon: Users },
     { name: "Scheduler", href: "/admin/scheduler", icon: Calendar },
     { name: "Insights", href: "/admin/insights", icon: BarChart3 },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? "block" : "hidden"}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+      <div
+        className={`fixed inset-0 z-50 lg:hidden ${
+          sidebarOpen ? "block" : "hidden"
+        }`}
+      >
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-75"
+          onClick={() => setSidebarOpen(false)}
+        />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
           <div className="flex h-16 items-center justify-between px-4">
             <h1 className="text-xl font-bold text-gray-900">HR Admin</h1>
@@ -30,7 +48,7 @@ const Layout = ({ children }) => {
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
-              const Icon = item.icon
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -45,7 +63,7 @@ const Layout = ({ children }) => {
                   <Icon className="mr-3 h-5 w-5" />
                   {item.name}
                 </Link>
-              )
+              );
             })}
           </nav>
         </div>
@@ -59,7 +77,7 @@ const Layout = ({ children }) => {
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
-              const Icon = item.icon
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -73,7 +91,7 @@ const Layout = ({ children }) => {
                   <Icon className="mr-3 h-5 w-5" />
                   {item.name}
                 </Link>
-              )
+              );
             })}
           </nav>
         </div>
@@ -83,7 +101,11 @@ const Layout = ({ children }) => {
       <div className="lg:pl-64">
         {/* Top bar */}
         <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-          <button type="button" className="-m-2.5 p-2.5 text-gray-700 lg:hidden" onClick={() => setSidebarOpen(true)}>
+          <button
+            type="button"
+            className="-m-2.5 p-2.5 text-gray-700 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
             <Menu className="h-6 w-6" />
           </button>
 
@@ -101,11 +123,21 @@ const Layout = ({ children }) => {
                 <Bell className="h-6 w-6" />
                 <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white" />
               </button>
+              {/* User avatar and name */}
               <div className="flex items-center gap-x-2">
                 <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
                   <User className="h-5 w-5 text-gray-600" />
                 </div>
-                <span className="text-sm font-medium text-gray-900">Sarah Johnson</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {(() => {
+                    try {
+                      const hr = JSON.parse(localStorage.getItem("hr"));
+                      return hr?.hr_username || "HR User";
+                    } catch {
+                      return "HR User";
+                    }
+                  })()}
+                </span>
               </div>
             </div>
           </div>
@@ -113,11 +145,13 @@ const Layout = ({ children }) => {
 
         {/* Page content */}
         <main className="py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

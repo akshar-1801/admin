@@ -1,70 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search, Filter, Edit, Trash2, Eye } from "lucide-react";
 import CreateJobModal from "../components/CreateJobModal";
+import { getAllJobs } from "../api/job";
 
 const Jobs = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [jobs, setJobs] = useState([
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      department: "Engineering",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      status: "Open",
-      applicants: 45,
-      posted: "2024-01-15",
-      deadline: "2024-02-15",
-    },
-    {
-      id: 2,
-      title: "UX Designer",
-      department: "Design",
-      location: "Remote",
-      type: "Full-time",
-      status: "Open",
-      applicants: 32,
-      posted: "2024-01-10",
-      deadline: "2024-02-10",
-    },
-    {
-      id: 3,
-      title: "Product Manager",
-      department: "Product",
-      location: "New York, NY",
-      type: "Full-time",
-      status: "Closed",
-      applicants: 78,
-      posted: "2024-01-05",
-      deadline: "2024-01-25",
-    },
-    {
-      id: 4,
-      title: "Backend Developer",
-      department: "Engineering",
-      location: "Austin, TX",
-      type: "Full-time",
-      status: "Open",
-      applicants: 28,
-      posted: "2024-01-20",
-      deadline: "2024-02-20",
-    },
-    {
-      id: 5,
-      title: "Marketing Specialist",
-      department: "Marketing",
-      location: "Los Angeles, CA",
-      type: "Part-time",
-      status: "Open",
-      applicants: 15,
-      posted: "2024-01-18",
-      deadline: "2024-02-18",
-    },
-  ]);
+  const [jobs, setJobs] = useState([]);
+
+  useEffect(() => {
+    // Get HR id from localStorage
+    const hr = JSON.parse(localStorage.getItem("hr"));
+    const hrId = hr?.id || hr?._id || hr?.hr_id;
+    if (!hrId) return;
+    getAllJobs(hrId)
+      .then(setJobs)
+      .catch((err) => {
+        console.error(err);
+        setJobs([]);
+      });
+  }, []);
 
   const handleCreateJob = (newJob) => {
     setJobs((prevJobs) => [...prevJobs, newJob]);
@@ -72,10 +30,14 @@ const Jobs = () => {
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.department.toLowerCase().includes(searchTerm.toLowerCase());
+      job.job_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.job_department?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter =
-      filterStatus === "all" || job.status.toLowerCase() === filterStatus;
+      filterStatus === "all" ||
+      (job.status
+        ? job.status.toLowerCase() === filterStatus
+        : (job.open_date && !job.close_date) ||
+          (job.close_date && filterStatus === "closed"));
     return matchesSearch && matchesFilter;
   });
 
@@ -145,7 +107,7 @@ const Jobs = () => {
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
+                    Job Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Applicants
@@ -163,39 +125,47 @@ const Jobs = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredJobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-gray-50">
+                  <tr key={job._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {job.title}
+                          {job.job_title}
                         </div>
-                        <div className="text-sm text-gray-500">{job.type}</div>
+                        <div className="text-sm text-gray-500">
+                          {job.job_department}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {job.department}
+                      {job.job_department}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {job.location}
+                      {job.job_type || "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {job.applicants} applicants
+                        {job.job_applicant} applicants
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          job.status === "Open"
+                          !job.close_date ||
+                          job.close_date > new Date().toISOString()
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {job.status}
+                        {!job.close_date ||
+                        job.close_date > new Date().toISOString()
+                          ? "Open"
+                          : "Closed"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(job.posted).toLocaleDateString()}
+                      {job.posted_date
+                        ? new Date(job.posted_date).toLocaleDateString()
+                        : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center space-x-2">

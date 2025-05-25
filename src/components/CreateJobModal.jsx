@@ -1,50 +1,80 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import { createJob } from "../api/job";
 
 export default function CreateJobModal({ isOpen, onClose, onCreateJob }) {
   const [jobData, setJobData] = useState({
-    title: "",
-    department: "",
-    location: "",
-    type: "Full-time",
-    description: "",
-    requirements: "",
-    deadline: "",
+    job_title: "",
+    job_department: "",
+    job_type: "Full-time",
+    job_des: "",
+    job_applicant: 0,
+    posted_date: new Date().toISOString().split("T")[0],
+    open_date: "",
+    close_date: "",
+    problem_statements: "",
+    job_salary: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     // Basic validation
     if (
-      !jobData.title ||
-      !jobData.department ||
-      !jobData.location ||
-      !jobData.deadline ||
-      !jobData.description ||
-      !jobData.requirements
+      !jobData.job_title ||
+      !jobData.job_department ||
+      !jobData.job_type ||
+      !jobData.job_des ||
+      !jobData.open_date ||
+      !jobData.close_date ||
+      !jobData.problem_statements ||
+      !jobData.job_salary
     ) {
       alert("Please fill in all required fields.");
+      setIsLoading(false);
       return;
     }
-
-    onCreateJob({
-      ...jobData,
-      id: Date.now(), // Simple unique ID
-      status: "Open",
-      applicants: 0,
-      posted: new Date().toISOString().split("T")[0],
-    });
-    // Reset form after submission
-    setJobData({
-      title: "",
-      department: "",
-      location: "",
-      type: "Full-time",
-      description: "",
-      requirements: "",
-      deadline: "",
-    });
-    onClose();
+    // Prepare payload
+    const hr = JSON.parse(localStorage.getItem("hr"));
+    const hr_id = hr?.id || hr?._id || hr?.hr_id;
+    const payload = {
+      job_title: jobData.job_title,
+      job_department: jobData.job_department,
+      job_type: jobData.job_type,
+      job_des: jobData.job_des.split(",").map((s) => s.trim()),
+      job_applicant: Number(jobData.job_applicant) || 0,
+      posted_date: jobData.posted_date,
+      open_date: jobData.open_date,
+      close_date: jobData.close_date,
+      problem_statements: jobData.problem_statements
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      hr_id,
+      job_salary: Number(jobData.job_salary),
+    };
+    try {
+      const created = await createJob(payload);
+      onCreateJob(created);
+      setJobData({
+        job_title: "",
+        job_department: "",
+        job_type: "Full-time",
+        job_des: "",
+        job_applicant: 0,
+        posted_date: new Date().toISOString().split("T")[0],
+        open_date: "",
+        close_date: "",
+        problem_statements: "",
+        job_salary: "",
+      });
+      onClose();
+    } catch (err) {
+      alert("Failed to create job. Please try again.");
+      console.error(err);
+    }
+    setIsLoading(false);
   };
 
   const handleChange = (e) => {
@@ -79,14 +109,13 @@ export default function CreateJobModal({ isOpen, onClose, onCreateJob }) {
                 <input
                   required
                   type="text"
-                  name="title"
-                  value={jobData.title}
+                  name="job_title"
+                  value={jobData.job_title}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., Senior Frontend Developer"
+                  placeholder="e.g., Backend Developer"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Department*
@@ -94,37 +123,21 @@ export default function CreateJobModal({ isOpen, onClose, onCreateJob }) {
                 <input
                   required
                   type="text"
-                  name="department"
-                  value={jobData.department}
+                  name="job_department"
+                  value={jobData.job_department}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., Engineering"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Location*
-                </label>
-                <input
-                  required
-                  type="text"
-                  name="location"
-                  value={jobData.location}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., San Francisco, CA"
-                />
-              </div>
-
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Job Type*
                 </label>
                 <select
                   required
-                  name="type"
-                  value={jobData.type}
+                  name="job_type"
+                  value={jobData.job_type}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -134,49 +147,89 @@ export default function CreateJobModal({ isOpen, onClose, onCreateJob }) {
                   <option value="Internship">Internship</option>
                 </select>
               </div>
-
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium mb-1">
-                  Application Deadline*
+                  Skills (comma separated)*
+                </label>
+                <input
+                  required
+                  type="text"
+                  name="job_des"
+                  value={jobData.job_des}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., Python, FastAPI, MongoDB"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Number of Applicants
+                </label>
+                <input
+                  type="number"
+                  name="job_applicant"
+                  value={jobData.job_applicant}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 10"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Salary (in USD)*
+                </label>
+                <input
+                  required
+                  type="number"
+                  name="job_salary"
+                  value={jobData.job_salary}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 80000"
+                  min="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Open Date*
                 </label>
                 <input
                   required
                   type="date"
-                  name="deadline"
-                  value={jobData.deadline}
+                  name="open_date"
+                  value={jobData.open_date}
                   onChange={handleChange}
-                  min={new Date().toISOString().split("T")[0]}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-
-              <div className="md:col-span-2">
+              <div>
                 <label className="block text-sm font-medium mb-1">
-                  Job Description*
+                  Close Date*
                 </label>
-                <textarea
+                <input
                   required
-                  name="description"
-                  value={jobData.description}
+                  type="date"
+                  name="close_date"
+                  value={jobData.close_date}
                   onChange={handleChange}
-                  rows="4"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter job description..."
                 />
               </div>
-
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">
-                  Requirements*
+                  Problem Statements (one per line)*
                 </label>
                 <textarea
                   required
-                  name="requirements"
-                  value={jobData.requirements}
+                  name="problem_statements"
+                  value={jobData.problem_statements}
                   onChange={handleChange}
-                  rows="4"
+                  rows="2"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter job requirements..."
+                  placeholder={
+                    "e.g.\nBuild a REST API\nOptimize database queries"
+                  }
                 />
               </div>
             </div>
@@ -191,9 +244,17 @@ export default function CreateJobModal({ isOpen, onClose, onCreateJob }) {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center min-w-[110px]"
+                disabled={isLoading}
               >
-                Create Job
+                {isLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+                    Creating...
+                  </>
+                ) : (
+                  "Create Job"
+                )}
               </button>
             </div>
           </form>

@@ -9,10 +9,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const dummyUsers = [
-  { username: "testuser", email: "test@example.com", password: "password123" },
-];
+import { createHR, loginHR } from "../api/hr";
 
 // Floating particles component
 const FloatingParticles = () => {
@@ -74,6 +71,9 @@ export default function Login() {
     email: "",
     password: "",
     confirmPassword: "",
+    company: "",
+    location: "",
+    description: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -102,15 +102,17 @@ export default function Login() {
 
   const handleSignup = async () => {
     setIsLoading(true);
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setError("");
+    setSuccess("");
 
     if (
       !form.username ||
       !form.email ||
       !form.password ||
-      !form.confirmPassword
+      !form.confirmPassword ||
+      !form.company ||
+      !form.location ||
+      !form.description
     ) {
       setError("All fields are required.");
       setIsLoading(false);
@@ -121,45 +123,62 @@ export default function Login() {
       setIsLoading(false);
       return;
     }
-    const exists = dummyUsers.find(
-      (u) => u.email === form.email || u.username === form.username
-    );
-    if (exists) {
-      setError("User already exists.");
-      setIsLoading(false);
-      return;
+    try {
+      // Format data as expected by backend
+      const payload = {
+        hr_username: form.username,
+        hr_pass: form.password,
+        hr_email: form.email,
+        hr_company: form.company,
+        hr_location: form.location,
+        hr_description: form.description,
+      };
+      await createHR(payload);
+      setSuccess("Account created successfully! Welcome aboard!");
+      setIsSignup(false);
+      setForm({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        company: "",
+        location: "",
+        description: "",
+      });
+    } catch (err) {
+      console.error(err?.response?.data || err);
+      setError(
+        err?.response?.data?.message || "Signup failed. Please try again."
+      );
     }
-    dummyUsers.push({
-      username: form.username,
-      email: form.email,
-      password: form.password,
-    });
-    setSuccess("Account created successfully! Welcome aboard!");
-    setIsSignup(false);
-    setForm({ username: "", email: "", password: "", confirmPassword: "" });
     setIsLoading(false);
   };
 
   const handleLogin = async () => {
     setIsLoading(true);
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const user = dummyUsers.find(
-      (u) => u.email === form.email && u.password === form.password
-    );
-    if (user) {
+    setError("");
+    setSuccess("");
+    try {
+      const payload = {
+        hr_email: form.email, // or form.username if you want username login
+        hr_pass: form.password,
+      };
+      const hr = await loginHR(payload);
+      // Save HR object and random sessionid in localStorage
+      localStorage.setItem("hr", JSON.stringify(hr));
+      localStorage.setItem(
+        "sessionid",
+        Math.random().toString(36).substring(2)
+      );
       setSuccess("Welcome back! Redirecting to your dashboard...");
-      setError("");
-      // Note: localStorage removed as per artifact restrictions
-      // In a real app, you'd handle authentication differently
       setTimeout(() => {
-        console.log("Would navigate to /admin/dashboard");
         navigate("/admin/dashboard");
       }, 1000);
-    } else {
-      setError("Invalid credentials. Please try again.");
+    } catch (err) {
+      console.error(err?.response?.data || err);
+      setError(
+        err?.response?.data?.message || "Invalid credentials. Please try again."
+      );
       setSuccess("");
     }
     setIsLoading(false);
@@ -231,98 +250,204 @@ export default function Login() {
 
               {/* Form fields */}
               <div className="space-y-4">
-                {isSignup && (
-                  <div className="group">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        name="username"
-                        placeholder="Enter your username"
-                        value={form.username}
-                        onChange={handleChange}
-                        className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
-                      />
+                {isSignup ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Left column */}
+                    <div className="space-y-4">
+                      {/* Username */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Username
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            name="username"
+                            placeholder="Enter your username"
+                            value={form.username}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                        </div>
+                      </div>
+                      {/* Email */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Email Address
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="email"
+                            name="email"
+                            placeholder="Enter your email"
+                            value={form.email}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                        </div>
+                      </div>
+                      {/* Company */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Company
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="company"
+                            placeholder="Enter your company"
+                            value={form.company}
+                            onChange={handleChange}
+                            className="w-full pl-3 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Right column */}
+                    <div className="space-y-4">
+                      {/* Password */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            placeholder="Enter your password"
+                            value={form.password}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-9 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Confirm Password */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Confirm Password
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            placeholder="Confirm your password"
+                            value={form.confirmPassword}
+                            onChange={handleChange}
+                            className="w-full pl-9 pr-9 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Location */}
+                      <div className="group">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Location
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="location"
+                            placeholder="Enter your location"
+                            value={form.location}
+                            onChange={handleChange}
+                            className="w-full pl-3 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ) : (
+                  // ...existing code for login fields...
+                  <>
+                    {/* Email */}
+                    <div className="group">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="email"
+                          name="email"
+                          placeholder="Enter your email"
+                          value={form.email}
+                          onChange={handleChange}
+                          className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                        />
+                      </div>
+                    </div>
+                    {/* Password */}
+                    <div className="group">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          placeholder="Enter your password"
+                          value={form.password}
+                          onChange={handleChange}
+                          className="w-full pl-9 pr-9 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
-
-                <div className="group">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="email"
-                      name="email"
-                      placeholder="Enter your email"
-                      value={form.email}
-                      onChange={handleChange}
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
-                    />
-                  </div>
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      placeholder="Enter your password"
-                      value={form.password}
-                      onChange={handleChange}
-                      className="w-full pl-9 pr-9 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
+                {/* Description (always on signup, full width below grid) */}
                 {isSignup && (
                   <div className="group">
                     <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Confirm Password
+                      Description
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        placeholder="Confirm your password"
-                        value={form.confirmPassword}
+                        type="text"
+                        name="description"
+                        placeholder="Enter a short description"
+                        value={form.description}
                         onChange={handleChange}
-                        className="w-full pl-9 pr-9 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
+                        className="w-full pl-3 pr-3 py-2 rounded-lg border text-sm placeholder:text-sm border-black/10 bg-white/80"
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
                     </div>
                   </div>
                 )}
@@ -365,6 +490,9 @@ export default function Login() {
                     email: "",
                     password: "",
                     confirmPassword: "",
+                    company: "",
+                    location: "",
+                    description: "",
                   });
                 }}
                 className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-300"
